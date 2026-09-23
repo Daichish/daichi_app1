@@ -1,21 +1,7 @@
 import { expenses } from "./expenseData.js";
+import { formatYen } from "../../utils/money.js";
+import { formatDateTime } from "../../utils/date.js";
 
-
-function formatYen(amount) {
-  return `¥${amount.toLocaleString("ja-JP")}`;
-}
-
-function formatDateTime(dateTime) {
-  const date = new Date(dateTime);
-
-  return date.toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function getPayerName(payer) {
   if (payer === "me") {
@@ -273,6 +259,8 @@ function handleExpenseSubmit(event) {
   };
 
   expenses.push(newExpense);
+
+  refreshExpensePage();
 } else {
   const expense = findExpenseById(editingExpenseId);
 
@@ -294,11 +282,7 @@ function handleExpenseSubmit(event) {
    * 画面を再描画
    */
 
-  const appContent = document.querySelector("#app-content");
-
-  appContent.innerHTML = renderExpenses();
-
-  initializeExpenses();
+refreshExpensePage();
 }
 
 
@@ -638,12 +622,11 @@ function deleteExpense(expenseId) {
 
   expenses.splice(index, 1);
 
-  const appContent =
-    document.querySelector("#app-content");
+if (editingExpenseId === expenseId) {
+  cancelEdit();
+}
 
-  appContent.innerHTML = renderExpenses();
-
-  initializeExpenses();
+refreshExpensePage();
 }
 
 
@@ -809,4 +792,14 @@ function getFilteredExpenses() {
   }
 
   return expenses;
+}
+
+function refreshExpensePage() {
+  const appContent =
+    document.querySelector("#app-content");
+
+  appContent.innerHTML =
+    renderExpenses();
+
+  initializeExpenses();
 }

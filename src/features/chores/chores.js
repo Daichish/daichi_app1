@@ -1,5 +1,5 @@
 import { choreState } from "./choreData.js";
-
+import { formatDate } from "../../utils/date.js";
 
 /*
  * 担当者名を取得
@@ -49,16 +49,6 @@ function getEndOfWeek(date = new Date()) {
 }
 
 
-/*
- * 日付を表示用に変換
- */
-function formatDate(date) {
-  return date.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-}
 
 
 /*
@@ -855,3 +845,4 @@ function handleChoreManagementAction(event) {
     deleteChoreTask(taskId);
   }
 }
+
