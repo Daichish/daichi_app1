@@ -1,19 +1,33 @@
 import { renderHome } from "./features/home/home.js";
-import { renderExpenses } from "./features/expenses/expenses.js";
+import {
+  renderExpenses,
+  initializeExpenses,
+} from "./features/expenses/expenses.js";
 import { renderChores } from "./features/chores/chores.js";
 
 const appContent = document.querySelector("#app-content");
 
 const routes = {
-  home: renderHome,
-  expenses: renderExpenses,
-  chores: renderChores,
+  home: {
+    render: renderHome,
+  },
+
+  expenses: {
+    render: renderExpenses,
+    init: initializeExpenses,
+  },
+
+  chores: {
+    render: renderChores,
+  },
 };
 
 function showPage(route) {
-  const render = routes[route] ?? routes.home;
+  const page = routes[route] ?? routes.home;
 
-  appContent.innerHTML = render();
+  appContent.innerHTML = page.render();
+
+  page.init?.();
 }
 
 function router() {
