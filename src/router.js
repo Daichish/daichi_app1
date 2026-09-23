@@ -10,6 +10,7 @@ import {
 
 import {
   renderChores,
+  initializeChores,
 } from "./features/chores/chores.js";
 
 const appContent =
@@ -27,6 +28,7 @@ const routes = {
 
   chores: {
     render: renderChores,
+    init: initializeChores,
   },
 };
 

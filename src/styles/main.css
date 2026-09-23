@@ -410,3 +410,193 @@ td button {
     gap: 6px;
   }
 }
+
+
+/* =========================
+   家事当番
+========================= */
+
+.chores-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.chore-week-card {
+  background-color: #ffffff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chore-week-card h3 {
+  margin: 0 0 8px;
+}
+
+.chore-week-card p {
+  margin: 0;
+  color: #777;
+}
+
+#rotate-chore-button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.chore-group {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.chore-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chore-group-header h3 {
+  margin: 0 0 6px;
+}
+
+.chore-group-header p {
+  margin: 0;
+  color: #777;
+}
+
+#group-a-tasks,
+#group-b-tasks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chore-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.chore-item:last-child {
+  border-bottom: none;
+}
+
+.chore-item button {
+  min-width: 90px;
+  padding: 7px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.chore-item button.is-completed {
+  background-color: #eee;
+  color: #777;
+}
+
+@media (max-width: 768px) {
+  .chore-week-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  #rotate-chore-button {
+    width: 100%;
+  }
+
+  .chore-item {
+    align-items: flex-start;
+  }
+}
+
+/* =========================
+   家事タスク管理
+========================= */
+
+.chore-management {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.chore-management h3 {
+  margin-top: 0;
+}
+
+#chore-task-form {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.chore-task-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chore-task-form-actions button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#chore-task-management-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chore-management-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.chore-management-item:last-child {
+  border-bottom: none;
+}
+
+.chore-management-item > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chore-management-item > div:first-child span:first-child {
+  font-size: 12px;
+  color: #777;
+  min-width: 40px;
+}
+
+.chore-management-item button {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.chore-management-item button + button {
+  margin-left: 4px;
+}
