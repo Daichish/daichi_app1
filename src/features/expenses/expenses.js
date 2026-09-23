@@ -1,5 +1,6 @@
 import { expenses } from "./expenseData.js";
 
+
 function formatYen(amount) {
   return `¥${amount.toLocaleString("ja-JP")}`;
 }
@@ -96,16 +97,20 @@ function renderExpenseRows() {
     const detailButton = document.createElement("button");
     detailButton.type = "button";
     detailButton.textContent = "詳細";
+    detailButton.dataset.action = "detail";
     detailButton.dataset.expenseId = expense.id;
 
     const editButton = document.createElement("button");
     editButton.type = "button";
     editButton.textContent = "編集";
+    editButton.dataset.action = "edit";
     editButton.dataset.expenseId = expense.id;
+
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.textContent = "削除";
+    deleteButton.dataset.action = "delete";
     deleteButton.dataset.expenseId = expense.id;
 
     actionCell.append(
@@ -202,6 +207,7 @@ function handleExpenseSubmit(event) {
    * 新しい支出オブジェクトを作る
    */
 
+ if (editingExpenseId === null) {
   const newExpense = {
     id: crypto.randomUUID(),
     occurredAt,
@@ -210,12 +216,22 @@ function handleExpenseSubmit(event) {
     amount,
   };
 
-
-  /*
-   * 配列へ追加
-   */
-
   expenses.push(newExpense);
+} else {
+  const expense = findExpenseById(editingExpenseId);
+
+  if (!expense) {
+    return;
+  }
+
+  expense.occurredAt = occurredAt;
+  expense.itemName = itemName;
+  expense.payer = payer;
+  expense.amount = amount;
+
+  editingExpenseId = null;
+}
+
 
 
   /*
@@ -367,7 +383,13 @@ export function renderExpenses() {
           <button type="submit">
             支出を登録
           </button>
-
+          <button
+            id="cancel-edit-button"
+            type="button"
+            hidden
+          >
+            編集をキャンセル
+          </button>
         </form>
 
       </section>
@@ -434,4 +456,153 @@ export function initializeExpenses() {
     "submit",
     handleExpenseSubmit
   );
+
+  const expenseList =
+    document.querySelector("#expense-list");
+
+  expenseList.addEventListener(
+    "click",
+    handleExpenseAction
+  );
+
+  const cancelButton =
+    document.querySelector("#cancel-edit-button");
+
+  cancelButton.addEventListener(
+    "click",
+    cancelEdit
+  );
+}
+
+/*
+ * 折半管理画面のデータを編集
+ */
+let editingExpenseId = null;
+
+function findExpenseById(id) {
+  return expenses.find((expense) => {
+    return expense.id === id;
+  });
+}
+
+function startEditExpense(expenseId) {
+  const expense = findExpenseById(expenseId);
+
+  if (!expense) {
+    return;
+  }
+
+  editingExpenseId = expenseId;
+
+  const form = document.querySelector("#expense-form");
+
+  form.elements["expense-date"].value =
+    expense.occurredAt;
+
+  form.elements["expense-item"].value =
+    expense.itemName;
+
+  form.elements["expense-payer"].value =
+    expense.payer;
+
+  form.elements["expense-amount"].value =
+    expense.amount;
+
+  const submitButton =
+    form.querySelector('button[type="submit"]');
+
+  submitButton.textContent = "支出を更新";
+
+  const cancelButton =
+    document.querySelector("#cancel-edit-button");
+
+  cancelButton.hidden = false;
+}
+
+function cancelEdit() {
+  editingExpenseId = null;
+
+  const form = document.querySelector("#expense-form");
+
+  form.reset();
+
+  const submitButton =
+    form.querySelector('button[type="submit"]');
+
+  submitButton.textContent = "支出を登録";
+
+  const cancelButton =
+    document.querySelector("#cancel-edit-button");
+
+  cancelButton.hidden = true;
+}
+
+
+
+/*
+ * 折半管理画面のデータを削除
+ */
+
+function deleteExpense(expenseId) {
+  const expense = findExpenseById(expenseId);
+
+  if (!expense) {
+    return;
+  }
+
+  const shouldDelete = confirm(
+    `「${expense.itemName}」を削除しますか？`
+  );
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  const index = expenses.findIndex((expense) => {
+    return expense.id === expenseId;
+  });
+
+  if (index === -1) {
+    return;
+  }
+
+  expenses.splice(index, 1);
+
+  const appContent =
+    document.querySelector("#app-content");
+
+  appContent.innerHTML = renderExpenses();
+
+  initializeExpenses();
+}
+
+
+//ボタンイベント
+function handleExpenseAction(event) {
+  const button = event.target.closest("button");
+
+  if (!button) {
+    return;
+  }
+
+  const action = button.dataset.action;
+  const expenseId = button.dataset.expenseId;
+
+  if (!expenseId) {
+    return;
+  }
+
+  if (action === "edit") {
+    startEditExpense(expenseId);
+    return;
+  }
+
+  if (action === "delete") {
+    deleteExpense(expenseId);
+    return;
+  }
+
+  if (action === "detail") {
+    console.log("詳細:", expenseId);
+  }
 }
