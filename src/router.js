@@ -1,21 +1,19 @@
+import { renderHome } from "./features/home/home.js";
+import { renderExpenses } from "./features/expenses/expenses.js";
+import { renderChores } from "./features/chores/chores.js";
+
+const appContent = document.querySelector("#app-content");
+
 const routes = {
-  home: document.querySelector("#home"),
-  expenses: document.querySelector("#expenses"),
-  chores: document.querySelector("#chores"),
+  home: renderHome,
+  expenses: renderExpenses,
+  chores: renderChores,
 };
 
 function showPage(route) {
-  Object.values(routes).forEach((page) => {
-    page.hidden = true;
-  });
+  const render = routes[route] ?? routes.home;
 
-  const targetPage = routes[route];
-
-  if (targetPage) {
-    targetPage.hidden = false;
-  } else {
-    routes.home.hidden = false;
-  }
+  appContent.innerHTML = render();
 }
 
 function router() {
