@@ -285,3 +285,128 @@ td {
 td button {
   margin-right: 4px;
 }
+
+/* =========================
+   折半管理 UI
+========================= */
+
+.expense-detail-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.detail-card {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.expense-detail-list {
+  margin: 0;
+}
+
+.expense-detail-list > div {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.expense-detail-list > div:last-child {
+  border-bottom: none;
+}
+
+.expense-detail-list dt {
+  font-weight: bold;
+  color: #666;
+}
+
+.expense-detail-list dd {
+  margin: 0;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.detail-actions button,
+.detail-actions a {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.secondary-button {
+  background-color: #eee;
+  color: #333;
+}
+
+.edit-detail-button {
+  background-color: #ddd;
+}
+
+.delete-detail-button {
+  background-color: #ddd;
+}
+
+
+/* 支出一覧 */
+
+.expense-history table button {
+  padding: 6px 10px;
+  margin-right: 4px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.expense-history table button:hover {
+  background-color: #f5f5f5;
+}
+
+
+/* 小さい画面 */
+
+@media (max-width: 768px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 64px auto 1fr 40px;
+    grid-template-areas:
+      "header"
+      "sidebar"
+      "main"
+      "footer";
+  }
+
+  aside {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+
+  aside ul {
+    display: flex;
+    gap: 8px;
+  }
+
+  aside li {
+    margin-bottom: 0;
+  }
+
+  main {
+    padding: 16px;
+  }
+
+  .expense-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-detail-list > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
