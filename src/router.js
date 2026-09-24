@@ -16,6 +16,16 @@ import {
 const appContent =
   document.querySelector("#app-content");
 
+const globalLoading =
+  document.querySelector("#global-loading");
+
+function showGlobalLoading() {
+  globalLoading.hidden = false;
+}
+
+function hideGlobalLoading() {
+  globalLoading.hidden = true;
+}
 
 const routes = {
   home: {
@@ -105,13 +115,56 @@ async function router() {
     id,
   } = parseHash();
 
-  await showPage(
-    route || "home",
-    action,
-    id
-  );
-}
+  const currentRoute =
+    route || "home";
 
+  showGlobalLoading();
+
+  try {
+    await showPage(
+      currentRoute,
+      action,
+      id
+    );
+
+  } catch (error) {
+
+    console.error(error);
+
+    appContent.innerHTML = `
+      <section class="page-error">
+        <h2>エラーが発生しました</h2>
+
+        <p>
+          データを読み込めませんでした。
+        </p>
+
+        <button
+          id="retry-router-button"
+          type="button"
+        >
+          もう一度試す
+        </button>
+      </section>
+    `;
+
+    const retryButton =
+      document.querySelector(
+        "#retry-router-button"
+      );
+
+    retryButton.addEventListener(
+      "click",
+      () => {
+        void router();
+      }
+    );
+
+  } finally {
+
+    hideGlobalLoading();
+  }
+}
 
 let routerStarted = false;
 
