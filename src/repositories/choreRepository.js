@@ -305,11 +305,12 @@ export async function listChorePeriodTasks(periodId) {
       created_at,
       updated_at,
       chore_tasks (
-        id,
-        group_id,
-        name,
-        is_active
-      ),
+            id,
+            group_id,
+            name,
+            sort_order,
+            is_active
+        )   ,
       household_members (
         id,
         display_name
@@ -338,9 +339,14 @@ export async function listChorePeriodTasks(periodId) {
     completedAt: task.completed_at,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
-    groupId: task.chore_tasks?.group_id ?? null,
+    groupId:
+    task.chore_tasks?.group_id ?? null,
+
+    sortOrder:
+    task.chore_tasks?.sort_order ?? 0,
+
     isActive:
-      task.chore_tasks?.is_active ?? false,
+    task.chore_tasks?.is_active ?? false,
   }));
 }
 

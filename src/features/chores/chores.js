@@ -156,6 +156,9 @@ function getTasksByGroup(groupId) {
         task.groupId === groupId &&
         task.isActive
       );
+    })
+    .sort((a, b) => {
+      return a.sortOrder - b.sortOrder;
     });
 }
 
@@ -194,6 +197,20 @@ function renderChoreTasks(
   const tasks =
     getTasksByGroup(groupId);
 
+    if (tasks.length === 0) {
+  const item =
+    document.createElement("li");
+
+  item.className =
+    "chore-item-empty";
+
+  item.textContent =
+    "登録されている家事はありません。";
+
+  container.append(item);
+
+  return;
+}
   tasks.forEach((task) => {
     const item =
       document.createElement("li");
@@ -430,30 +447,31 @@ async function loadChoreData() {
 /*
  * ステータス変更
  */
-async function toggleChoreStatus(taskId) {
+async function toggleChoreStatus(
+  taskId,
+  button
+) {
   const task =
     currentPeriodTasks.find((task) => {
       return task.id === taskId;
     });
 
-
   if (!task) {
     return;
   }
 
+  button.disabled = true;
 
   const nextStatus =
     task.status === "pending"
       ? "done"
       : "pending";
 
-
   try {
     await updateChorePeriodTaskStatus({
       periodTaskId: taskId,
       status: nextStatus,
     });
-
 
     await loadChoreData();
 
@@ -462,6 +480,9 @@ async function toggleChoreStatus(taskId) {
   } catch (error) {
     console.error(error);
     alert(error.message);
+
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -495,6 +516,8 @@ async function rotateChores() {
 
 
   rotateButton.disabled = true;
+  rotateButton.textContent =
+  "交代中...";
 
 
   try {
@@ -542,6 +565,8 @@ async function rotateChores() {
     alert(error.message);
 
   } finally {
+    rotateButton.textContent =
+  "当番交代";
     rotateButton.disabled = false;
   }
 }
@@ -570,8 +595,11 @@ function handleChoreAction(event) {
     action === "toggle-status" &&
     taskId
   ) {
-    void toggleChoreStatus(taskId);
-  }
+    void toggleChoreStatus(
+      taskId,
+      button
+    );
+}
 }
 
 
@@ -615,26 +643,38 @@ function renderChoreTaskManagement() {
   list.innerHTML = "";
 
 
-  const activeTasks =
-    [...choreTasks]
-      .sort((a, b) => {
+const groupOrder = new Map(
+  choreGroups.map((group, index) => {
+    return [group.id, index];
+  })
+);
 
-        if (
-          a.groupId === b.groupId
-        ) {
-          return (
-            a.sortOrder -
-            b.sortOrder
-          );
-        }
+const activeTasks =
+  [...choreTasks].sort((a, b) => {
+    const groupDiff =
+      (groupOrder.get(a.groupId) ?? 999) -
+      (groupOrder.get(b.groupId) ?? 999);
 
-        return (
-          a.groupId.localeCompare(
-            b.groupId
-          )
-        );
-      });
+    if (groupDiff !== 0) {
+      return groupDiff;
+    }
 
+    return a.sortOrder - b.sortOrder;
+  });
+
+  if (activeTasks.length === 0) {
+  const item = document.createElement("li");
+
+  item.className =
+    "chore-management-empty";
+
+  item.textContent =
+    "登録されている家事タスクはありません。";
+
+  list.append(item);
+
+  return;
+}
 
   activeTasks.forEach((task) => {
     const item =
@@ -759,7 +799,7 @@ function handleChoreManagementAction(event) {
 
 
   if (action === "delete-task") {
-    void deleteChoreTask(taskId);
+    void deleteChoreTask(taskId, button);
   }
 }
 
@@ -799,7 +839,16 @@ async function handleChoreTaskSubmit(event) {
       "家事名を入力してください。"
     );
     return;
+
+    
   }
+
+  if (name.length > 100) {
+  alert(
+    "家事名は100文字以内で入力してください。"
+  );
+  return;
+}
 
 
   if (
@@ -1064,48 +1113,43 @@ function cancelEditChoreTask() {
 /*
  * タスク論理削除
  */
-async function deleteChoreTask(taskId) {
+async function deleteChoreTask(
+  taskId,
+  button
+) {
   const task =
     choreTasks.find((task) => {
       return task.id === taskId;
     });
 
-
   if (!task) {
     return;
   }
-
 
   const shouldDelete =
     window.confirm(
       `「${task.name}」を削除しますか？`
     );
 
-
   if (!shouldDelete) {
     return;
   }
 
+  button.disabled = true;
+  button.textContent = "削除中...";
 
   try {
     await deactivateChoreTask({
       householdId:
         currentMember.householdId,
-
       taskId,
     });
 
-
-    if (
-      editingChoreTaskId ===
-      taskId
-    ) {
+    if (editingChoreTaskId === taskId) {
       cancelEditChoreTask();
     }
 
-
     await loadChoreData();
-
 
     renderChoreContent();
     renderChoreTaskManagement();
@@ -1113,9 +1157,12 @@ async function deleteChoreTask(taskId) {
   } catch (error) {
     console.error(error);
     alert(error.message);
+
+  } finally {
+    button.disabled = false;
+    button.textContent = "削除";
   }
 }
-
 
 /*
  * 家事当番画面
@@ -1204,6 +1251,7 @@ export function renderChores() {
             name="chore-task-name"
             type="text"
             placeholder="例：お風呂掃除"
+            maxlength="100"
             required
           />
 
