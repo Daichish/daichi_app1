@@ -1,0 +1,602 @@
+/* =========================
+   全体
+========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background-color: #f5f6f8;
+  color: #333;
+}
+
+#app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 64px 1fr 40px;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer";
+}
+
+
+/* =========================
+   ヘッダー
+========================= */
+
+header {
+  grid-area: header;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+
+/* =========================
+   サイドバー
+========================= */
+
+aside {
+  grid-area: sidebar;
+  background-color: #ffffff;
+  border-right: 1px solid #ddd;
+  padding: 20px 12px;
+}
+
+aside ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+aside li {
+  margin-bottom: 8px;
+}
+
+aside a {
+  display: block;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: #333;
+  border-radius: 8px;
+}
+
+aside a:hover {
+  background-color: #f0f0f0;
+}
+
+
+/* =========================
+   メイン
+========================= */
+
+main {
+  grid-area: main;
+  padding: 32px;
+  overflow-y: auto;
+}
+
+
+/* =========================
+   フッター
+========================= */
+
+footer {
+  grid-area: footer;
+  background-color: #ffffff;
+  border-top: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+footer p {
+  margin: 0;
+  font-size: 12px;
+  color: #777;
+}
+/* =========================
+   折半管理
+========================= */
+
+.expenses-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+
+/* ページヘッダー */
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 8px;
+}
+
+.page-header p {
+  margin: 0;
+  color: #777;
+}
+
+
+/* サマリー */
+
+.expense-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.summary-card h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #777;
+}
+
+.summary-card p {
+  margin: 0;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+
+/* 精算状況 */
+
+.settlement-card {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.settlement-card h3 {
+  margin: 0 0 12px;
+}
+
+.settlement-card p {
+  margin: 0 0 8px;
+}
+
+.settlement-card strong {
+  font-size: 28px;
+}
+
+
+/* フォーム */
+
+.expense-form-section {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.expense-form-section h3 {
+  margin-top: 0;
+}
+
+#expense-form {
+  display: grid;
+  gap: 16px;
+}
+
+.form-group {
+  display: grid;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select,
+#expense-filter {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.amount-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.amount-input input {
+  flex: 1;
+}
+
+#expense-form button {
+  width: fit-content;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+
+/* 支出履歴 */
+
+.expense-history {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  margin: 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  font-size: 14px;
+  color: #666;
+}
+
+td {
+  font-size: 14px;
+}
+
+td button {
+  margin-right: 4px;
+}
+
+/* =========================
+   折半管理 UI
+========================= */
+
+.expense-detail-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.detail-card {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.expense-detail-list {
+  margin: 0;
+}
+
+.expense-detail-list > div {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.expense-detail-list > div:last-child {
+  border-bottom: none;
+}
+
+.expense-detail-list dt {
+  font-weight: bold;
+  color: #666;
+}
+
+.expense-detail-list dd {
+  margin: 0;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.detail-actions button,
+.detail-actions a {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.secondary-button {
+  background-color: #eee;
+  color: #333;
+}
+
+.edit-detail-button {
+  background-color: #ddd;
+}
+
+.delete-detail-button {
+  background-color: #ddd;
+}
+
+
+/* 支出一覧 */
+
+.expense-history table button {
+  padding: 6px 10px;
+  margin-right: 4px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.expense-history table button:hover {
+  background-color: #f5f5f5;
+}
+
+
+/* 小さい画面 */
+
+@media (max-width: 768px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 64px auto 1fr 40px;
+    grid-template-areas:
+      "header"
+      "sidebar"
+      "main"
+      "footer";
+  }
+
+  aside {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+
+  aside ul {
+    display: flex;
+    gap: 8px;
+  }
+
+  aside li {
+    margin-bottom: 0;
+  }
+
+  main {
+    padding: 16px;
+  }
+
+  .expense-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-detail-list > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+
+/* =========================
+   家事当番
+========================= */
+
+.chores-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.chore-week-card {
+  background-color: #ffffff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chore-week-card h3 {
+  margin: 0 0 8px;
+}
+
+.chore-week-card p {
+  margin: 0;
+  color: #777;
+}
+
+#rotate-chore-button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.chore-group {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.chore-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chore-group-header h3 {
+  margin: 0 0 6px;
+}
+
+.chore-group-header p {
+  margin: 0;
+  color: #777;
+}
+
+#group-a-tasks,
+#group-b-tasks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chore-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.chore-item:last-child {
+  border-bottom: none;
+}
+
+.chore-item button {
+  min-width: 90px;
+  padding: 7px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.chore-item button.is-completed {
+  background-color: #eee;
+  color: #777;
+}
+
+@media (max-width: 768px) {
+  .chore-week-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  #rotate-chore-button {
+    width: 100%;
+  }
+
+  .chore-item {
+    align-items: flex-start;
+  }
+}
+
+/* =========================
+   家事タスク管理
+========================= */
+
+.chore-management {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.chore-management h3 {
+  margin-top: 0;
+}
+
+#chore-task-form {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.chore-task-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chore-task-form-actions button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#chore-task-management-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chore-management-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.chore-management-item:last-child {
+  border-bottom: none;
+}
+
+.chore-management-item > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chore-management-item > div:first-child span:first-child {
+  font-size: 12px;
+  color: #777;
+  min-width: 40px;
+}
+
+.chore-management-item button {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.chore-management-item button + button {
+  margin-left: 4px;
+}
