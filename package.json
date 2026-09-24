@@ -13,5 +13,8 @@
   },
   "volta": {
     "node": "24.21.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.1"
   }
 }

@@ -1,41 +1,78 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
 
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
+<head>
+  <meta charset="UTF-8" />
 
-    <title>二人暮らし管理</title>
-  </head>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
-  <body>
-    <div id="app">
+  <title>二人暮らし管理</title>
+</head>
 
-      <header>
-        <h1>二人暮らし管理</h1>
-      </header>
+<body>
 
-      <aside>
-        <nav>
-          <ul>
-            <li><a href="#home">トップ</a></li>
-            <li><a href="#expenses">折半管理</a></li>
-            <li><a href="#chores">家事当番</a></li>
-          </ul>
-        </nav>
-      </aside>
+  <div id="auth-root"></div>
 
-      <main id="app-content"></main>
 
-      <footer>
-        <p>&copy; 二人暮らし管理</p>
-      </footer>
+  <div id="app" hidden>
 
-    </div>
+    <header>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+      <h1>二人暮らし管理</h1>
+
+      <div class="header-actions">
+
+        <span id="current-user-email"></span>
+
+        <button
+          id="logout-button"
+          type="button"
+        >
+          ログアウト
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <aside>
+      <nav>
+        <ul>
+          <li>
+            <a href="#home">トップ</a>
+          </li>
+
+          <li>
+            <a href="#expenses">折半管理</a>
+          </li>
+
+          <li>
+            <a href="#chores">家事当番</a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+
+    <main id="app-content"></main>
+
+
+    <footer>
+      <p>&copy; 二人暮らし管理</p>
+    </footer>
+
+  </div>
+
+
+  <script
+    type="module"
+    src="/src/main.js"
+  ></script>
+
+</body>
+
 </html>

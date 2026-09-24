@@ -5,7 +5,6 @@ import {
   initializeExpenses,
   renderExpenseDetail,
   initializeExpenseDetail,
-  startEditExpense,
 } from "./features/expenses/expenses.js";
 
 import {
@@ -13,8 +12,10 @@ import {
   initializeChores,
 } from "./features/chores/chores.js";
 
+
 const appContent =
   document.querySelector("#app-content");
+
 
 const routes = {
   home: {
@@ -34,9 +35,11 @@ const routes = {
 
 
 function parseHash() {
-  const hash = window.location.hash.slice(1);
+  const hash =
+    window.location.hash.slice(1);
 
-  const [route, action, id] = hash.split("/");
+  const [route, action, id] =
+    hash.split("/");
 
   return {
     route,
@@ -46,7 +49,12 @@ function parseHash() {
 }
 
 
-function showPage(route, action, id) {
+async function showPage(
+  route,
+  action,
+  id
+) {
+
   // 支出詳細
   if (
     route === "expenses" &&
@@ -54,12 +62,13 @@ function showPage(route, action, id) {
     action !== "edit"
   ) {
     appContent.innerHTML =
-      renderExpenseDetail(action);
+      renderExpenseDetail();
 
-    initializeExpenseDetail(action);
+    await initializeExpenseDetail(action);
 
     return;
   }
+
 
   // 支出編集
   if (
@@ -70,12 +79,13 @@ function showPage(route, action, id) {
     appContent.innerHTML =
       renderExpenses();
 
-    initializeExpenses();
-
-    startEditExpense(id);
+    await initializeExpenses({
+      editExpenseId: id,
+    });
 
     return;
   }
+
 
   // 通常のページ
   const page =
@@ -84,18 +94,18 @@ function showPage(route, action, id) {
   appContent.innerHTML =
     page.render();
 
-  page.init?.();
+  await page.init?.();
 }
 
 
-function router() {
+async function router() {
   const {
     route,
     action,
     id,
   } = parseHash();
 
-  showPage(
+  await showPage(
     route || "home",
     action,
     id
@@ -103,9 +113,23 @@ function router() {
 }
 
 
-window.addEventListener(
-  "hashchange",
-  router
-);
+let routerStarted = false;
 
-router();
+
+export function startRouter() {
+  if (routerStarted) {
+    void router();
+    return;
+  }
+
+  window.addEventListener(
+    "hashchange",
+    () => {
+      void router();
+    }
+  );
+
+  routerStarted = true;
+
+  void router();
+}
