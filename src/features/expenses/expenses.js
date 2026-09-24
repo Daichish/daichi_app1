@@ -1,36 +1,149 @@
-import { expenses } from "./expenseData.js";
-import { formatYen } from "../../utils/money.js";
-import { formatDateTime } from "../../utils/date.js";
+import {
+  listExpenses,
+  getExpenseById,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+} from "../../repositories/expenseRepository.js";
+
+import {
+  listHouseholdMembers,
+} from "../../repositories/householdMemberRepository.js";
+
+import {
+  getCurrentMember,
+} from "../../services/currentMember.js";
 
 
-function getPayerName(payer) {
-  if (payer === "me") {
-    return "あなた";
-  }
+let editingExpenseId = null;
+let selectedExpenseFilter = "all";
 
-  if (payer === "partner") {
-    return "彼女";
-  }
+let currentMember = null;
+let householdMembers = [];
+let loadedExpenses = [];
 
-  return "不明";
+
+/*
+ * 金額表示
+ */
+function formatYen(amount) {
+  return `¥${amount.toLocaleString("ja-JP")}`;
 }
 
+
+/*
+ * 日時表示
+ */
+function formatDateTime(dateTime) {
+  const date = new Date(dateTime);
+
+  return date.toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+
+/*
+ * datetime-local用の値へ変換
+ */
+function toDatetimeLocalValue(dateTime) {
+  const date = new Date(dateTime);
+
+  const pad = (value) => {
+    return String(value).padStart(2, "0");
+  };
+
+  return [
+    date.getFullYear(),
+    "-",
+    pad(date.getMonth() + 1),
+    "-",
+    pad(date.getDate()),
+    "T",
+    pad(date.getHours()),
+    ":",
+    pad(date.getMinutes()),
+  ].join("");
+}
+
+
+/*
+ * 現在のユーザー以外のメンバー名を取得
+ */
+function getPartnerDisplayName() {
+  const partner = householdMembers.find((member) => {
+    return member.id !== currentMember.id;
+  });
+
+  return partner?.displayName ?? "相手";
+}
+
+
+/*
+ * 今月かどうか
+ */
+function isThisMonth(dateTime) {
+  const date = new Date(dateTime);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
+}
+
+
+/*
+ * フィルター後の支出
+ */
+function getFilteredExpenses() {
+  if (selectedExpenseFilter === "all") {
+    return loadedExpenses;
+  }
+
+  if (selectedExpenseFilter === "this-month") {
+    return loadedExpenses.filter((expense) => {
+      return isThisMonth(expense.occurredAt);
+    });
+  }
+
+  return loadedExpenses;
+}
+
+
+/*
+ * IDから支出を探す
+ */
+function findExpenseById(expenseId) {
+  return loadedExpenses.find((expense) => {
+    return expense.id === expenseId;
+  });
+}
+
+
+/*
+ * 支出サマリー計算
+ */
 function calculateSummary() {
   const targetExpenses =
     getFilteredExpenses();
 
   const total =
-    targetExpenses.reduce(
-      (sum, expense) => {
-        return sum + expense.amount;
-      },
-      0
-    );
+    targetExpenses.reduce((sum, expense) => {
+      return sum + expense.amount;
+    }, 0);
 
   const myTotal =
     targetExpenses
       .filter((expense) => {
-        return expense.payer === "me";
+        return (
+          expense.payerMemberId ===
+          currentMember.id
+        );
       })
       .reduce((sum, expense) => {
         return sum + expense.amount;
@@ -39,7 +152,10 @@ function calculateSummary() {
   const partnerTotal =
     targetExpenses
       .filter((expense) => {
-        return expense.payer === "partner";
+        return (
+          expense.payerMemberId !==
+          currentMember.id
+        );
       })
       .reduce((sum, expense) => {
         return sum + expense.amount;
@@ -51,10 +167,10 @@ function calculateSummary() {
 
   if (myTotal > half) {
     settlementText =
-      `彼女 → あなた ${formatYen(myTotal - half)}`;
+      `${getPartnerDisplayName()} → ${currentMember.displayName} ${formatYen(myTotal - half)}`;
   } else if (partnerTotal > half) {
     settlementText =
-      `あなた → 彼女 ${formatYen(partnerTotal - half)}`;
+      `${currentMember.displayName} → ${getPartnerDisplayName()} ${formatYen(partnerTotal - half)}`;
   } else {
     settlementText = "精算なし";
   }
@@ -69,11 +185,72 @@ function calculateSummary() {
 
 
 /*
- * 支出一覧をDOMへ描画する
+ * サマリーを描画
+ */
+function renderSummary() {
+  const summary =
+    calculateSummary();
+
+  document.querySelector(
+    "#expense-total"
+  ).textContent =
+    formatYen(summary.total);
+
+  document.querySelector(
+    "#expense-my-total"
+  ).textContent =
+    formatYen(summary.myTotal);
+
+  document.querySelector(
+    "#expense-partner-total"
+  ).textContent =
+    formatYen(summary.partnerTotal);
+
+  document.querySelector(
+    "#expense-settlement"
+  ).textContent =
+    summary.settlementText;
+}
+
+
+/*
+ * 負担者のselectをDBのメンバーから生成
+ */
+function renderPayerOptions() {
+  const select =
+    document.querySelector(
+      "#expense-payer"
+    );
+
+  select.innerHTML = "";
+
+  householdMembers.forEach((member) => {
+    const option =
+      document.createElement("option");
+
+    option.value = member.id;
+    option.textContent =
+      member.displayName;
+
+    if (
+      member.id === currentMember.id
+    ) {
+      option.selected = true;
+    }
+
+    select.append(option);
+  });
+}
+
+
+/*
+ * 支出一覧を描画
  */
 function renderExpenseRows() {
   const expenseList =
-    document.querySelector("#expense-list");
+    document.querySelector(
+      "#expense-list"
+    );
 
   expenseList.innerHTML = "";
 
@@ -97,15 +274,20 @@ function renderExpenseRows() {
     return;
   }
 
+
   filteredExpenses.forEach((expense) => {
     const row =
       document.createElement("tr");
+
 
     const dateCell =
       document.createElement("td");
 
     dateCell.textContent =
-      formatDateTime(expense.occurredAt);
+      formatDateTime(
+        expense.occurredAt
+      );
+
 
     const itemCell =
       document.createElement("td");
@@ -113,11 +295,13 @@ function renderExpenseRows() {
     itemCell.textContent =
       expense.itemName;
 
+
     const payerCell =
       document.createElement("td");
 
     payerCell.textContent =
-      getPayerName(expense.payer);
+      expense.payerName;
+
 
     const amountCell =
       document.createElement("td");
@@ -125,41 +309,50 @@ function renderExpenseRows() {
     amountCell.textContent =
       formatYen(expense.amount);
 
+
     const actionCell =
       document.createElement("td");
+
 
     const detailButton =
       document.createElement("button");
 
     detailButton.type = "button";
     detailButton.textContent = "詳細";
-    detailButton.dataset.action = "detail";
+    detailButton.dataset.action =
+      "detail";
     detailButton.dataset.expenseId =
       expense.id;
+
 
     const editButton =
       document.createElement("button");
 
     editButton.type = "button";
     editButton.textContent = "編集";
-    editButton.dataset.action = "edit";
+    editButton.dataset.action =
+      "edit";
     editButton.dataset.expenseId =
       expense.id;
+
 
     const deleteButton =
       document.createElement("button");
 
     deleteButton.type = "button";
     deleteButton.textContent = "削除";
-    deleteButton.dataset.action = "delete";
+    deleteButton.dataset.action =
+      "delete";
     deleteButton.dataset.expenseId =
       expense.id;
+
 
     actionCell.append(
       detailButton,
       editButton,
       deleteButton
     );
+
 
     row.append(
       dateCell,
@@ -169,55 +362,153 @@ function renderExpenseRows() {
       actionCell
     );
 
+
     expenseList.append(row);
   });
 }
 
 
 /*
- * サマリーをDOMへ描画する
+ * Supabaseから支出を読み込む
  */
-function renderSummary() {
-  const summary = calculateSummary();
+async function loadExpenses() {
+  loadedExpenses =
+    await listExpenses(
+      currentMember.householdId
+    );
 
-  document.querySelector("#expense-total").textContent =
-    formatYen(summary.total);
-
-  document.querySelector("#expense-my-total").textContent =
-    formatYen(summary.myTotal);
-
-  document.querySelector("#expense-partner-total").textContent =
-    formatYen(summary.partnerTotal);
-
-  document.querySelector("#expense-settlement").textContent =
-    summary.settlementText;
+  renderSummary();
+  renderExpenseRows();
 }
 
 
 /*
- * 支出登録
+ * 編集開始
  */
-function handleExpenseSubmit(event) {
+function startEditExpense(expenseId) {
+  const expense =
+    findExpenseById(expenseId);
+
+  if (!expense) {
+    return;
+  }
+
+  editingExpenseId =
+    expenseId;
+
+
+  const form =
+    document.querySelector(
+      "#expense-form"
+    );
+
+
+  form.elements[
+    "expense-date"
+  ].value =
+    toDatetimeLocalValue(
+      expense.occurredAt
+    );
+
+
+  form.elements[
+    "expense-item"
+  ].value =
+    expense.itemName;
+
+
+  form.elements[
+    "expense-payer"
+  ].value =
+    expense.payerMemberId;
+
+
+  form.elements[
+    "expense-amount"
+  ].value =
+    expense.amount;
+
+
+  const submitButton =
+    form.querySelector(
+      'button[type="submit"]'
+    );
+
+  submitButton.textContent =
+    "支出を更新";
+
+
+  document.querySelector(
+    "#cancel-edit-button"
+  ).hidden = false;
+}
+
+
+/*
+ * 編集キャンセル
+ */
+function cancelEdit() {
+  editingExpenseId = null;
+
+  const form =
+    document.querySelector(
+      "#expense-form"
+    );
+
+  form.reset();
+
+  const submitButton =
+    form.querySelector(
+      'button[type="submit"]'
+    );
+
+  submitButton.textContent =
+    "支出を登録";
+
+
+  document.querySelector(
+    "#cancel-edit-button"
+  ).hidden = true;
+
+  renderPayerOptions();
+}
+
+
+/*
+ * 支出登録・更新
+ */
+async function handleExpenseSubmit(event) {
   event.preventDefault();
 
-  const form = event.currentTarget;
-  const formData = new FormData(form);
+  const form =
+    event.currentTarget;
 
-  const occurredAt = String(
-    formData.get("expense-date") ?? ""
-  );
+  const formData =
+    new FormData(form);
 
-  const itemName = String(
-    formData.get("expense-item") ?? ""
-  ).trim();
 
-  const payer = String(
-    formData.get("expense-payer") ?? ""
-  );
+  const occurredAt =
+    String(
+      formData.get("expense-date") ?? ""
+    );
 
-  const amount = Number(
-    formData.get("expense-amount")
-  );
+
+  const itemName =
+    String(
+      formData.get("expense-item") ?? ""
+    ).trim();
+
+
+  const payerMemberId =
+    String(
+      formData.get("expense-payer") ?? ""
+    );
+
+
+  const amount =
+    Number(
+      formData.get("expense-amount")
+    );
 
 
   /*
@@ -225,95 +516,257 @@ function handleExpenseSubmit(event) {
    */
 
   if (!occurredAt) {
-    alert("購入日時を入力してください。");
+    alert(
+      "購入日時を入力してください。"
+    );
     return;
   }
+
 
   if (!itemName) {
-    alert("購入品を入力してください。");
-    return;
-  }
-
-  if (payer !== "me" && payer !== "partner") {
-    alert("負担者を選択してください。");
-    return;
-  }
-
-  if (!Number.isInteger(amount) || amount < 1) {
-    alert("金額は1円以上の整数で入力してください。");
+    alert(
+      "購入品を入力してください。"
+    );
     return;
   }
 
 
-  /*
-   * 新しい支出オブジェクトを作る
-   */
+  const payerExists =
+    householdMembers.some((member) => {
+      return (
+        member.id === payerMemberId
+      );
+    });
 
- if (editingExpenseId === null) {
-  const newExpense = {
-    id: crypto.randomUUID(),
-    occurredAt,
-    itemName,
-    payer,
-    amount,
-  };
 
-  expenses.push(newExpense);
+  if (!payerExists) {
+    alert(
+      "正しい負担者を選択してください。"
+    );
+    return;
+  }
 
-  refreshExpensePage();
-} else {
-  const expense = findExpenseById(editingExpenseId);
+
+  if (
+    !Number.isInteger(amount) ||
+    amount < 1
+  ) {
+    alert(
+      "金額は1円以上の整数で入力してください。"
+    );
+    return;
+  }
+
+
+  const submitButton =
+    form.querySelector(
+      'button[type="submit"]'
+    );
+
+  submitButton.disabled = true;
+
+
+  try {
+
+    if (editingExpenseId === null) {
+
+      await createExpense({
+        householdId:
+          currentMember.householdId,
+        occurredAt,
+        itemName,
+        payerMemberId,
+        amount,
+      });
+
+    } else {
+
+      await updateExpense({
+        householdId:
+          currentMember.householdId,
+        expenseId:
+          editingExpenseId,
+        occurredAt,
+        itemName,
+        payerMemberId,
+        amount,
+      });
+    }
+
+
+    editingExpenseId = null;
+
+    form.reset();
+
+    submitButton.textContent =
+      "支出を登録";
+
+
+    document.querySelector(
+      "#cancel-edit-button"
+    ).hidden = true;
+
+
+    renderPayerOptions();
+
+    await loadExpenses();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(error.message);
+
+  } finally {
+
+    submitButton.disabled = false;
+  }
+}
+
+
+/*
+ * 支出削除
+ */
+async function handleDeleteExpense(
+  expenseId
+) {
+  const expense =
+    findExpenseById(expenseId);
 
   if (!expense) {
     return;
   }
 
-  expense.occurredAt = occurredAt;
-  expense.itemName = itemName;
-  expense.payer = payer;
-  expense.amount = amount;
 
-  editingExpenseId = null;
-}
+  const shouldDelete =
+    window.confirm(
+      `「${expense.itemName}」を削除しますか？`
+    );
 
 
+  if (!shouldDelete) {
+    return;
+  }
 
-  /*
-   * 画面を再描画
-   */
 
-refreshExpensePage();
+  try {
+
+    await deleteExpense(
+      currentMember.householdId,
+      expenseId
+    );
+
+
+    if (
+      editingExpenseId === expenseId
+    ) {
+      editingExpenseId = null;
+    }
+
+
+    await loadExpenses();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(error.message);
+  }
 }
 
 
 /*
- * 折半管理画面のHTML
+ * 支出一覧のボタン操作
+ */
+function handleExpenseAction(event) {
+  const button =
+    event.target.closest("button");
+
+  if (!button) {
+    return;
+  }
+
+
+  const action =
+    button.dataset.action;
+
+  const expenseId =
+    button.dataset.expenseId;
+
+
+  if (!expenseId) {
+    return;
+  }
+
+
+  if (action === "detail") {
+    window.location.hash =
+      `#expenses/${expenseId}`;
+
+    return;
+  }
+
+
+  if (action === "edit") {
+    window.location.hash =
+      `#expenses/edit/${expenseId}`;
+
+    return;
+  }
+
+
+  if (action === "delete") {
+    void handleDeleteExpense(
+      expenseId
+    );
+  }
+}
+
+
+/*
+ * 支出一覧画面
  */
 export function renderExpenses() {
   return `
     <section class="expenses-page">
 
       <div class="page-header">
+
         <h2>折半管理</h2>
-        <p>二人の支出状況を確認できます。</p>
+
+        <p>
+          二人の支出状況を確認できます。
+        </p>
+
       </div>
 
 
       <section class="expense-summary">
 
         <div class="summary-card">
+
           <h3>総支出</h3>
+
           <p id="expense-total"></p>
+
         </div>
 
+
         <div class="summary-card">
+
           <h3>あなたの負担</h3>
+
           <p id="expense-my-total"></p>
+
         </div>
 
+
         <div class="summary-card">
-          <h3>彼女の負担</h3>
+
+          <h3>相手の負担</h3>
+
           <p id="expense-partner-total"></p>
+
         </div>
 
       </section>
@@ -331,6 +784,7 @@ export function renderExpenses() {
       <section class="expense-form-section">
 
         <h3>支出を登録</h3>
+
 
         <form id="expense-form">
 
@@ -379,17 +833,8 @@ export function renderExpenses() {
               required
             >
               <option value="">
-                選択してください
+                読み込み中...
               </option>
-
-              <option value="me">
-                あなた
-              </option>
-
-              <option value="partner">
-                彼女
-              </option>
-
             </select>
 
           </div>
@@ -423,6 +868,8 @@ export function renderExpenses() {
           <button type="submit">
             支出を登録
           </button>
+
+
           <button
             id="cancel-edit-button"
             type="button"
@@ -430,6 +877,7 @@ export function renderExpenses() {
           >
             編集をキャンセル
           </button>
+
         </form>
 
       </section>
@@ -440,6 +888,7 @@ export function renderExpenses() {
         <div class="section-header">
 
           <h3>支出履歴</h3>
+
 
           <select id="expense-filter">
 
@@ -461,6 +910,7 @@ export function renderExpenses() {
           <table>
 
             <thead>
+
               <tr>
                 <th>日時</th>
                 <th>購入品</th>
@@ -468,7 +918,9 @@ export function renderExpenses() {
                 <th>金額</th>
                 <th>操作</th>
               </tr>
+
             </thead>
+
 
             <tbody id="expense-list"></tbody>
 
@@ -484,206 +936,30 @@ export function renderExpenses() {
 
 
 /*
- * 折半管理画面のイベントを初期化
+ * 支出詳細画面
  */
-export function initializeExpenses() {
-  renderSummary();
-  renderExpenseRows();
-
-  const form = document.querySelector("#expense-form");
-
-  form.addEventListener(
-    "submit",
-    handleExpenseSubmit
-  );
-
-  const expenseList =
-    document.querySelector("#expense-list");
-
-  expenseList.addEventListener(
-    "click",
-    handleExpenseAction
-  );
-
-  const cancelButton =
-    document.querySelector("#cancel-edit-button");
-
-  cancelButton.addEventListener(
-    "click",
-    cancelEdit
-  );
-
-  const filter =
-  document.querySelector("#expense-filter");
-
-filter.value =
-  selectedExpenseFilter;
-
-filter.addEventListener("change", (event) => {
-    selectedExpenseFilter =
-    event.target.value;
-
-    renderSummary();
-    renderExpenseRows();    
-});
-}
-
-/*
- * 折半管理画面のデータを編集
- */
-let editingExpenseId = null;
-
-function findExpenseById(id) {
-  return expenses.find((expense) => {
-    return expense.id === id;
-  });
-}
-
-export function startEditExpense(expenseId) {
-  const expense = findExpenseById(expenseId);
-
-  if (!expense) {
-    return;
-  }
-
-  editingExpenseId = expenseId;
-
-  const form = document.querySelector("#expense-form");
-
-  form.elements["expense-date"].value =
-    expense.occurredAt;
-
-  form.elements["expense-item"].value =
-    expense.itemName;
-
-  form.elements["expense-payer"].value =
-    expense.payer;
-
-  form.elements["expense-amount"].value =
-    expense.amount;
-
-  const submitButton =
-    form.querySelector('button[type="submit"]');
-
-  submitButton.textContent = "支出を更新";
-
-  const cancelButton =
-    document.querySelector("#cancel-edit-button");
-
-  cancelButton.hidden = false;
-}
-
-function cancelEdit() {
-  editingExpenseId = null;
-
-  const form = document.querySelector("#expense-form");
-
-  form.reset();
-
-  const submitButton =
-    form.querySelector('button[type="submit"]');
-
-  submitButton.textContent = "支出を登録";
-
-  const cancelButton =
-    document.querySelector("#cancel-edit-button");
-
-  cancelButton.hidden = true;
-}
-
-
-
-/*
- * 折半管理画面のデータを削除
- */
-
-function deleteExpense(expenseId) {
-  const expense = findExpenseById(expenseId);
-
-  if (!expense) {
-    return;
-  }
-
-  const shouldDelete = confirm(
-    `「${expense.itemName}」を削除しますか？`
-  );
-
-  if (!shouldDelete) {
-    return;
-  }
-
-  const index = expenses.findIndex((expense) => {
-    return expense.id === expenseId;
-  });
-
-  if (index === -1) {
-    return;
-  }
-
-  expenses.splice(index, 1);
-
-if (editingExpenseId === expenseId) {
-  cancelEdit();
-}
-
-refreshExpensePage();
-}
-
-
-//ボタンイベント
-function handleExpenseAction(event) {
-  const button = event.target.closest("button");
-
-  if (!button) {
-    return;
-  }
-
-  const action = button.dataset.action;
-  const expenseId = button.dataset.expenseId;
-
-  if (!expenseId) {
-    return;
-  }
-
-  if (action === "edit") {
-    startEditExpense(expenseId);
-    return;
-  }
-
-  if (action === "delete") {
-    deleteExpense(expenseId);
-    return;
-  }
-
-  if (action === "detail") {
-    window.location.hash = `#expenses/${expenseId}`;
-    return;
-  }
-}
-
-//支出詳細画面
-
-export function renderExpenseDetail(expenseId) {
-  const expense = findExpenseById(expenseId);
-
-  if (!expense) {
-    return `
-      <section class="expense-detail-page">
-        <h2>支出が見つかりません</h2>
-        <a href="#expenses">折半管理へ戻る</a>
-      </section>
-    `;
-  }
-
+export function renderExpenseDetail() {
   return `
     <section class="expense-detail-page">
 
       <div class="page-header">
+
         <h2>支出詳細</h2>
-        <p>登録されている支出の詳細を確認できます。</p>
+
+        <p>
+          登録されている支出の詳細を確認できます。
+        </p>
+
       </div>
 
-      <div id="expense-detail-content"></div>
+
+      <div
+        id="expense-detail-content"
+        class="detail-card"
+      >
+        <p>読み込み中...</p>
+      </div>
+
 
       <div class="detail-actions">
 
@@ -694,18 +970,18 @@ export function renderExpenseDetail(expenseId) {
           戻る
         </a>
 
+
         <button
+          id="edit-detail-button"
           type="button"
-          class="edit-detail-button"
-          data-expense-id="${expense.id}"
         >
           編集
         </button>
 
+
         <button
+          id="delete-detail-button"
           type="button"
-          class="delete-detail-button"
-          data-expense-id="${expense.id}"
         >
           削除
         </button>
@@ -716,90 +992,250 @@ export function renderExpenseDetail(expenseId) {
   `;
 }
 
-export function initializeExpenseDetail(expenseId) {
-  const expense = findExpenseById(expenseId);
+
+/*
+ * 支出一覧画面の初期化
+ */
+export async function initializeExpenses({
+  editExpenseId = null,
+} = {}) {
+
+  currentMember =
+    await getCurrentMember();
+
+
+  householdMembers =
+    await listHouseholdMembers(
+      currentMember.householdId
+    );
+
+
+  renderPayerOptions();
+
+
+  const form =
+    document.querySelector(
+      "#expense-form"
+    );
+
+  form.addEventListener(
+    "submit",
+    handleExpenseSubmit
+  );
+
+
+  const cancelButton =
+    document.querySelector(
+      "#cancel-edit-button"
+    );
+
+  cancelButton.addEventListener(
+    "click",
+    cancelEdit
+  );
+
+
+  const expenseList =
+    document.querySelector(
+      "#expense-list"
+    );
+
+  expenseList.addEventListener(
+    "click",
+    handleExpenseAction
+  );
+
+
+  const filter =
+    document.querySelector(
+      "#expense-filter"
+    );
+
+  filter.value =
+    selectedExpenseFilter;
+
+
+  filter.addEventListener(
+    "change",
+    (event) => {
+
+      selectedExpenseFilter =
+        event.target.value;
+
+      renderSummary();
+      renderExpenseRows();
+    }
+  );
+
+
+  await loadExpenses();
+
+
+  if (editExpenseId) {
+    startEditExpense(
+      editExpenseId
+    );
+  }
+}
+
+
+/*
+ * 支出詳細画面の初期化
+ */
+export async function initializeExpenseDetail(
+  expenseId
+) {
+
+  const member =
+    await getCurrentMember();
+
+
+  const expense =
+    await getExpenseById(
+      member.householdId,
+      expenseId
+    );
+
+
+  const content =
+    document.querySelector(
+      "#expense-detail-content"
+    );
+
 
   if (!expense) {
+
+    content.textContent =
+      "指定された支出が見つかりません。";
+
     return;
   }
 
-  const detailContent =
-    document.querySelector("#expense-detail-content");
+
+  const detailList =
+    document.createElement("dl");
+
+  detailList.className =
+    "expense-detail-list";
+
 
   const fields = [
-    ["購入日時", formatDateTime(expense.occurredAt)],
-    ["購入品", expense.itemName],
-    ["負担者", getPayerName(expense.payer)],
-    ["金額", formatYen(expense.amount)],
-    ["支出ID", expense.id],
+    [
+      "購入日時",
+      formatDateTime(
+        expense.occurredAt
+      ),
+    ],
+    [
+      "購入品",
+      expense.itemName,
+    ],
+    [
+      "負担者",
+      expense.payerName,
+    ],
+    [
+      "金額",
+      formatYen(expense.amount),
+    ],
+    [
+      "支出ID",
+      expense.id,
+    ],
   ];
 
-  const detailList = document.createElement("dl");
-  detailList.className = "expense-detail-list";
 
   fields.forEach(([label, value]) => {
-    const wrapper = document.createElement("div");
 
-    const term = document.createElement("dt");
-    term.textContent = label;
+    const wrapper =
+      document.createElement("div");
 
-    const description = document.createElement("dd");
-    description.textContent = value;
 
-    wrapper.append(term, description);
+    const term =
+      document.createElement("dt");
+
+    term.textContent =
+      label;
+
+
+    const description =
+      document.createElement("dd");
+
+    description.textContent =
+      value;
+
+
+    wrapper.append(
+      term,
+      description
+    );
+
+
     detailList.append(wrapper);
   });
 
-  detailContent.append(detailList);
+
+  content.replaceChildren(
+    detailList
+  );
+
 
   const editButton =
-    document.querySelector(".edit-detail-button");
+    document.querySelector(
+      "#edit-detail-button"
+    );
 
-  editButton.addEventListener("click", () => {
-  window.location.hash = `#expenses/edit/${expenseId}`;
-  });
+
+  editButton.addEventListener(
+    "click",
+    () => {
+
+      window.location.hash =
+        `#expenses/edit/${expense.id}`;
+
+    }
+  );
+
 
   const deleteButton =
-    document.querySelector(".delete-detail-button");
+    document.querySelector(
+      "#delete-detail-button"
+    );
 
-  deleteButton.addEventListener("click", () => {
-    deleteExpense(expenseId);
-  });
-}
 
-//期間フィルター
-let selectedExpenseFilter = "all";
+  deleteButton.addEventListener(
+    "click",
+    async () => {
 
-function isThisMonth(dateTime) {
-  const date = new Date(dateTime);
-  const now = new Date();
+      const shouldDelete =
+        window.confirm(
+          `「${expense.itemName}」を削除しますか？`
+        );
 
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth()
+
+      if (!shouldDelete) {
+        return;
+      }
+
+
+      try {
+
+        await deleteExpense(
+          member.householdId,
+          expense.id
+        );
+
+
+        window.location.hash =
+          "#expenses";
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(error.message);
+      }
+
+    }
   );
-}
-
-function getFilteredExpenses() {
-  if (selectedExpenseFilter === "all") {
-    return expenses;
-  }
-
-  if (selectedExpenseFilter === "this-month") {
-    return expenses.filter((expense) => {
-      return isThisMonth(expense.occurredAt);
-    });
-  }
-
-  return expenses;
-}
-
-function refreshExpensePage() {
-  const appContent =
-    document.querySelector("#app-content");
-
-  appContent.innerHTML =
-    renderExpenses();
-
-  initializeExpenses();
 }
