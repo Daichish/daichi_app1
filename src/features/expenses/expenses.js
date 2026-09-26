@@ -132,10 +132,12 @@ function calculateSummary() {
   const targetExpenses =
     getFilteredExpenses();
 
+
   const total =
     targetExpenses.reduce((sum, expense) => {
       return sum + expense.amount;
     }, 0);
+
 
   const myTotal =
     targetExpenses
@@ -149,6 +151,7 @@ function calculateSummary() {
         return sum + expense.amount;
       }, 0);
 
+
   const partnerTotal =
     targetExpenses
       .filter((expense) => {
@@ -161,24 +164,40 @@ function calculateSummary() {
         return sum + expense.amount;
       }, 0);
 
-  const half = total / 2;
+
+  /*
+   * 精算額
+   *
+   * 2人の支払額の差を2で割る
+   */
+  const settlementAmount =
+    Math.abs(
+      myTotal - partnerTotal
+    ) / 2;
+
 
   let settlementText;
 
-  if (myTotal > half) {
+
+  if (myTotal > partnerTotal) {
     settlementText =
-      `${getPartnerDisplayName()} → ${currentMember.displayName} ${formatYen(myTotal - half)}`;
-  } else if (partnerTotal > half) {
+      `${getPartnerDisplayName()} → ${currentMember.displayName}`;
+
+  } else if (partnerTotal > myTotal) {
     settlementText =
-      `${currentMember.displayName} → ${getPartnerDisplayName()} ${formatYen(partnerTotal - half)}`;
+      `${currentMember.displayName} → ${getPartnerDisplayName()}`;
+
   } else {
-    settlementText = "精算なし";
+    settlementText =
+      "精算なし";
   }
+
 
   return {
     total,
     myTotal,
     partnerTotal,
+    settlementAmount,
     settlementText,
   };
 }
@@ -191,25 +210,51 @@ function renderSummary() {
   const summary =
     calculateSummary();
 
+
   document.querySelector(
     "#expense-total"
   ).textContent =
     formatYen(summary.total);
+
 
   document.querySelector(
     "#expense-my-total"
   ).textContent =
     formatYen(summary.myTotal);
 
+
   document.querySelector(
     "#expense-partner-total"
   ).textContent =
     formatYen(summary.partnerTotal);
 
-  document.querySelector(
-    "#expense-settlement"
-  ).textContent =
-    summary.settlementText;
+
+  const settlementElement =
+    document.querySelector(
+      "#expense-settlement"
+    );
+
+
+  if (
+    summary.settlementAmount === 0
+  ) {
+    settlementElement.textContent =
+      "精算なし";
+
+    settlementElement.classList.remove(
+      "has-settlement"
+    );
+
+    return;
+  }
+
+
+  settlementElement.textContent =
+    `${summary.settlementText} ${formatYen(summary.settlementAmount)}`;
+
+  settlementElement.classList.add(
+    "has-settlement"
+  );
 }
 
 
@@ -396,6 +441,10 @@ function startEditExpense(expenseId) {
   editingExpenseId =
     expenseId;
 
+    document.querySelector(
+    "#expense-form-title"
+    ).textContent =
+    "支出を編集";
 
   const form =
     document.querySelector(
@@ -441,6 +490,8 @@ function startEditExpense(expenseId) {
   document.querySelector(
     "#cancel-edit-button"
   ).hidden = false;
+
+
 }
 
 
@@ -465,6 +516,10 @@ function cancelEdit() {
   submitButton.textContent =
     "支出を登録";
 
+  document.querySelector(
+    "#expense-form-title"
+  ).textContent =
+    "支出を登録";
 
   document.querySelector(
     "#cancel-edit-button"
@@ -472,8 +527,6 @@ function cancelEdit() {
 
   renderPayerOptions();
 }
-
-
 /*
  * 支出登録・更新
  */
@@ -523,6 +576,30 @@ async function handleExpenseSubmit(event) {
   }
 
 
+  const occurredDate =
+  new Date(occurredAt);
+
+if (
+  Number.isNaN(
+    occurredDate.getTime()
+  )
+) {
+  alert(
+    "正しい購入日時を入力してください。"
+  );
+  return;
+}
+
+if (
+  occurredDate.getTime() >
+  Date.now()
+) {
+  alert(
+    "未来の日時は登録できません。"
+  );
+  return;
+}
+
   if (!itemName) {
     alert(
       "購入品を入力してください。"
@@ -530,6 +607,12 @@ async function handleExpenseSubmit(event) {
     return;
   }
 
+if (itemName.length > 100) {
+  alert(
+    "購入品は100文字以内で入力してください。"
+  );
+  return;
+}
 
   const payerExists =
     householdMembers.some((member) => {
@@ -562,8 +645,15 @@ async function handleExpenseSubmit(event) {
     form.querySelector(
       'button[type="submit"]'
     );
+const isEditing =
+  editingExpenseId !== null;
 
-  submitButton.disabled = true;
+submitButton.disabled = true;
+
+submitButton.textContent =
+  isEditing
+    ? "更新中..."
+    : "登録中...";
 
 
   try {
@@ -618,9 +708,13 @@ async function handleExpenseSubmit(event) {
     alert(error.message);
 
   } finally {
+  submitButton.disabled = false;
 
-    submitButton.disabled = false;
-  }
+  submitButton.textContent =
+    isEditing
+      ? "支出を更新"
+      : "支出を登録";
+}
 }
 
 
@@ -772,18 +866,22 @@ export function renderExpenses() {
       </section>
 
 
-      <section class="settlement-card">
+        <section class="settlement-card">
 
         <h3>精算状況</h3>
 
-        <p id="expense-settlement"></p>
+        <p id="expense-settlement">
+            読み込み中...
+        </p>
 
-      </section>
+        </section>
 
 
       <section class="expense-form-section">
 
-        <h3>支出を登録</h3>
+       <h3 id="expense-form-title">
+        支出を登録
+        </h3>
 
 
         <form id="expense-form">
@@ -815,6 +913,7 @@ export function renderExpenses() {
               name="expense-item"
               type="text"
               placeholder="例：スーパー"
+              maxlength="100"
               required
             />
 
