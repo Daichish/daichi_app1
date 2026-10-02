@@ -30,20 +30,21 @@ function formatDateOnly(date) {
 /*
  * 今週の月曜日〜日曜日を取得
  */
+/*
+ * 今週の日曜日〜土曜日を取得
+ */
 function getCurrentWeekRange() {
   const today = new Date();
 
   const day = today.getDay();
 
-  const diffToMonday =
-    day === 0
-      ? -6
-      : 1 - day;
+  const diffToSunday =
+    -day;
 
   const start = new Date(today);
   start.setHours(0, 0, 0, 0);
   start.setDate(
-    start.getDate() + diffToMonday
+    start.getDate() + diffToSunday
   );
 
   const end = new Date(start);
