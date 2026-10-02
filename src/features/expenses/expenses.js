@@ -50,28 +50,14 @@ function getPartnerDisplayName() {
 }
 
 
-/*
- * 今月の支出だけ取得
- */
-function getThisMonthExpenses() {
-  const now = new Date();
 
-  return loadedExpenses.filter((expense) => {
-    const date = new Date(expense.occurredAt);
-
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth()
-    );
-  });
-}
 
 
 /*
  * 今月の集計
  */
 function calculateSummary() {
-  const expenses = getThisMonthExpenses();
+  const expenses = loadedExpenses;
 
   const total = expenses.reduce((sum, expense) => {
     return sum + expense.amount;
@@ -278,7 +264,7 @@ export function renderExpenses() {
         <h2>折半管理</h2>
 
         <p>
-          今月の支出状況を確認できます。
+          全期間の支出状況を確認できます。
         </p>
       </div>
 
@@ -286,7 +272,7 @@ export function renderExpenses() {
       <section class="expense-summary">
 
         <div class="summary-card">
-          <h3>今月の総支出</h3>
+          <h3>総支出</h3>
           <p id="expense-total"></p>
         </div>
 
