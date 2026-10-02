@@ -270,17 +270,55 @@ function renderGroupInfo(
   assigneeElementId,
   progressElementId
 ) {
-  const assigneeId =
+  const assignee =
     getGroupAssignee(groupId);
 
   const progress =
     calculateProgress(groupId);
 
 
+ const assigneeElement =
   document.querySelector(
     assigneeElementId
-  ).textContent =
-    `担当者：${getMemberName(assigneeId)}`;
+  );
+
+assigneeElement.innerHTML = "";
+
+const label =
+  document.createElement("span");
+
+label.textContent =
+  "担当者：";
+
+const memberBadge =
+  document.createElement("span");
+
+memberBadge.className =
+  "member-badge";
+
+const memberName =
+  getMemberName(assignee);
+
+if (memberName === "Daichi") {
+  memberBadge.classList.add(
+    "member-badge--daichi"
+  );
+}
+
+if (memberName === "Yayoi") {
+  memberBadge.classList.add(
+    "member-badge--yayoi"
+
+  );
+}
+
+memberBadge.textContent =
+  memberName;
+
+assigneeElement.append(
+  label,
+  memberBadge
+);
 
 
   document.querySelector(
